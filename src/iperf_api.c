@@ -2602,6 +2602,7 @@ iperf_new_stream(struct iperf_test *test, int s)
 
     sp = (struct iperf_stream *) malloc(sizeof(struct iperf_stream));
     if (!sp) {
+        fprintf(stderr, "iperf: malloc failed\n");
         i_errno = IECREATESTREAM;
         return NULL;
     }
@@ -2612,6 +2613,7 @@ iperf_new_stream(struct iperf_test *test, int s)
     sp->settings = test->settings;
     sp->result = (struct iperf_stream_result *) malloc(sizeof(struct iperf_stream_result));
     if (!sp->result) {
+        fprintf(stderr, "iperf: malloc2 failed\n");
         free(sp);
         i_errno = IECREATESTREAM;
         return NULL;
@@ -2623,18 +2625,22 @@ iperf_new_stream(struct iperf_test *test, int s)
     /* Create and randomize the buffer */
     sp->buffer_fd = mkstemp(template);
     if (sp->buffer_fd == -1) {
+        fprintf(stderr, "iperf: mkstemp\n");
         i_errno = IECREATESTREAM;
         free(sp->result);
         free(sp);
         return NULL;
     }
+    /*
     if (unlink(template) < 0) {
         i_errno = IECREATESTREAM;
         free(sp->result);
         free(sp);
         return NULL;
     }
+    */
     if (ftruncate(sp->buffer_fd, test->settings->blksize) < 0) {
+        fprintf(stderr, "iperf: ftruncate\n");
         i_errno = IECREATESTREAM;
         free(sp->result);
         free(sp);
@@ -2642,6 +2648,7 @@ iperf_new_stream(struct iperf_test *test, int s)
     }
     sp->buffer = (char *) mmap(NULL, test->settings->blksize, PROT_READ|PROT_WRITE, MAP_PRIVATE, sp->buffer_fd, 0);
     if (sp->buffer == MAP_FAILED) {
+        fprintf(stderr, "iperf: mmap failed\n");
         i_errno = IECREATESTREAM;
         free(sp->result);
         free(sp);

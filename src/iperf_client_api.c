@@ -287,6 +287,10 @@ iperf_connect(struct iperf_test *test)
 
     make_cookie(test->cookie);
 
+    test->settings->domain = AF_INET;
+
+    printf("Port: %d\n", test->server_port);
+
     /* Create and connect the control channel */
     if (test->ctrl_sck < 0)
 	// Create the control channel using an ephemeral port

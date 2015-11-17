@@ -190,13 +190,13 @@ cpu_util(double pcpu[3])
 
     if (pcpu == NULL) {
         gettimeofday(&last, NULL);
-        clast = clock();
+        clast = 0;
 	getrusage(RUSAGE_SELF, &rlast);
         return;
     }
 
     gettimeofday(&temp, NULL);
-    ctemp = clock();
+    ctemp = 0;
     getrusage(RUSAGE_SELF, &rtemp);
 
     timediff = ((temp.tv_sec * 1000000.0 + temp.tv_usec) -

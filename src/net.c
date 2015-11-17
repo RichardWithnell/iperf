@@ -70,6 +70,10 @@ netdial(int domain, int proto, char *local, int local_port, char *server, int po
 {
     struct addrinfo hints, *local_res, *server_res;
     int s;
+    struct sockaddr_in sin;
+    socklen_t len = sizeof(sin);
+
+    domain = AF_INET;
 
     if (local) {
         memset(&hints, 0, sizeof(hints));
@@ -129,6 +133,9 @@ netannounce(int domain, int proto, char *local, int port)
     struct addrinfo hints, *res;
     char portstr[6];
     int s, opt;
+
+    domain = AF_INET;
+
 
     snprintf(portstr, 6, "%d", port);
     memset(&hints, 0, sizeof(hints));

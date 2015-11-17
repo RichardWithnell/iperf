@@ -66,6 +66,9 @@
 int
 iperf_server_listen(struct iperf_test *test)
 {
+    test->settings->domain = AF_INET;
+
+
     retry:
     if((test->listener = netannounce(test->settings->domain, Ptcp, test->bind_address, test->server_port)) < 0) {
 	if (errno == EAFNOSUPPORT && (test->settings->domain == AF_INET6 || test->settings->domain == AF_UNSPEC)) {
@@ -607,6 +610,8 @@ iperf_run_server(struct iperf_test *test)
 	    (void) gettimeofday(&now, NULL);
 	    tmr_run(&now);
 	}
+
+        usleep(100);
     }
 
     cleanup_server(test);
