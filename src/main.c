@@ -45,6 +45,7 @@
 #include <stdint.h>
 #endif
 #include <netinet/tcp.h>
+#include <time.h>
 
 #include "iperf.h"
 #include "iperf_api.h"
@@ -58,7 +59,7 @@ static int run(struct iperf_test *test);
 
 /**************************************************************************/
 int
-main(int argc, char **argv)
+main2(int argc, char **argv)
 {
     struct iperf_test *test;
 
@@ -83,33 +84,37 @@ main(int argc, char **argv)
     int affinity = -1;
     int ncores = 1;
 
-    sched_getaffinity(0, sizeof(cpu_set_t), &cpu_set);
-    if (errno)
-        perror("couldn't get affinity:");
+    //sched_getaffinity(0, sizeof(cpu_set_t), &cpu_set);
+    //if (errno)
+    //    perror("couldn't get affinity:");
 
-    if ((ncores = sysconf(_SC_NPROCESSORS_CONF)) <= 0)
-        err("sysconf: couldn't get _SC_NPROCESSORS_CONF");
+    //if ((ncores = sysconf(_SC_NPROCESSORS_CONF)) <= 0)
+    //    err("sysconf: couldn't get _SC_NPROCESSORS_CONF");
 
-    CPU_ZERO(&cpu_set);
-    CPU_SET(affinity, &cpu_set);
-    if (sched_setaffinity(0, sizeof(cpu_set_t), &cpu_set) != 0)
-        err("couldn't change CPU affinity");
+    //CPU_ZERO(&cpu_set);
+    //CPU_SET(affinity, &cpu_set);
+    //if (sched_setaffinity(0, sizeof(cpu_set_t), &cpu_set) != 0)
+    //    err("couldn't change CPU affinity");
 #endif
 
     test = iperf_new_test();
-    if (!test)
-        iperf_errexit(NULL, "create new test error - %s", iperf_strerror(i_errno));
+    if (!test){
+        iperf_err(NULL, "create new test error - %s", iperf_strerror(i_errno));
+        return 1;
+    }
     iperf_defaults(test);	/* sets defaults */
 
     if (iperf_parse_arguments(test, argc, argv) < 0) {
         iperf_err(test, "parameter error - %s", iperf_strerror(i_errno));
         fprintf(stderr, "\n");
         usage_long();
-        exit(1);
+        return 1;
     }
 
-    if (run(test) < 0)
-        iperf_errexit(test, "error - %s", iperf_strerror(i_errno));
+    if (run(test) < 0){
+        iperf_err(test, "error - %s", iperf_strerror(i_errno));
+        return 1;
+    }
 
     iperf_free_test(test);
 
@@ -131,24 +136,22 @@ run(struct iperf_test *test)
 {
     int consecutive_errors;
 
-    /* Termination signals. */
-    iperf_catch_sigend(sigend_handler);
-    if (setjmp(sigend_jmp_buf))
-	iperf_got_sigend(test);
 
     switch (test->role) {
         case 's':
 	    if (test->daemon) {
-		int rc = daemon(0, 0);
-		if (rc < 0) {
-		    i_errno = IEDAEMON;
-		    iperf_errexit(test, "error - %s", iperf_strerror(i_errno));
-		}
+    		int rc = daemon(0, 0);
+    		if (rc < 0) {
+    		    i_errno = IEDAEMON;
+    		    iperf_err(test, "error - %s", iperf_strerror(i_errno));
+                return 1;
+    		}
 	    }
 	    consecutive_errors = 0;
 	    if (iperf_create_pidfile(test) < 0) {
-		i_errno = IEPIDFILE;
-		iperf_errexit(test, "error - %s", iperf_strerror(i_errno));
+    		i_errno = IEPIDFILE;
+    		iperf_err(test, "error - %s", iperf_strerror(i_errno));
+            return 1;
 	    }
             for (;;) {
 		if (iperf_run_server(test) < 0) {
@@ -168,15 +171,58 @@ run(struct iperf_test *test)
 	    iperf_delete_pidfile(test);
             break;
 	case 'c':
-	    if (iperf_run_client(test) < 0)
-		iperf_errexit(test, "error - %s", iperf_strerror(i_errno));
+	    if (iperf_run_client(test) < 0) {
+		    iperf_err(test, "error - %s", iperf_strerror(i_errno));
+            return 1;
+        }
             break;
         default:
             usage();
             break;
     }
 
-    iperf_catch_sigend(SIG_DFL);
+    //iperf_catch_sigend(SIG_DFL);
 
     return 0;
+}
+
+int
+main(int argc, char **argv)
+{
+    struct timespec monotime;
+    int iterations = 5;
+    int i = 0;
+    int j = 0;
+    clock_gettime(CLOCK_MONOTONIC, &monotime);
+    fprintf(stdout, "iperf start %lld.%.9ld\n",
+                    (long long)monotime.tv_sec,
+                    (long)monotime.tv_nsec);
+
+    printf("ARGC: %d\n", argc);
+
+    for(i = 0; i < argc; i++){
+        if(!strcmp(argv[i], "-s")){
+            iterations = 1;
+        }
+    }
+
+    for (i = 0; i < iterations; i++){
+        for(j = 0; j < argc-1; j++){
+            if(!strcmp(argv[j], "-p")){
+                printf("Port is: %d\n", atoi(argv[j+1]));
+                sprintf(argv[j+1], "%d\0", atoi(argv[j+1])+1);
+                printf("Port is now: %d\n", atoi(argv[j+1]));
+            }
+        }
+        main2(argc, argv);
+        sleep(2);
+    }
+
+    clock_gettime(CLOCK_MONOTONIC, &monotime);
+    fprintf(stdout, "iperf exit %lld.%.9ld\n",
+                    (long long)monotime.tv_sec,
+                    (long)monotime.tv_nsec);
+
+    return 0;
+
 }
