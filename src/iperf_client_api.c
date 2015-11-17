@@ -445,6 +445,9 @@ iperf_run_client(struct iperf_test * test)
 	    if (iperf_recv(test, &read_set) < 0)
 		return -1;
 	}
+
+        usleep(100);
+
     }
 
     if (test->json_output) {
